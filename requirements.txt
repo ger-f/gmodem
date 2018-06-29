@@ -6,3 +6,4 @@ dash_renderer
 flask
 pandas
 plotly
+gunicorn
