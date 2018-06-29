@@ -1,0 +1,14 @@
+.env
+*.pyc
+*.swp
+*.log
+/node_modules
+/db.sqlite3
+/dist
+/www/static
+/tmp
+.DS_Store
+__pycache__
+/.mypy_cache
+/.idea
+py-env/*
