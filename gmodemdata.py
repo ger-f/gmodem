@@ -7,36 +7,59 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-M = imaplib.IMAP4_SSL('imap.gmail.com')
+class PacketGetter:
+	def __init__(self):
+		self.M = get_mailbox()
+		self.packets = self.get_backlog()
+
+	def get_backlog(self):
+		return self.process_mailbox(mode='ALL')
+
+	def get_latest(self):
+		return self.process_mailbox(mode='UNSEEN')
+
+	def check_for_updates(self):
+		p = [i for i in self.get_latest() if len(i)]
+		if not len(p):
+			return
+		self.packets.extend(p)
+
+	def process_mailbox(self, mode):
+		rv, data = self.M.search(None, mode)
+		if rv != 'OK':
+			print("No messages found!")
+			return
+		p = [self._parse_mail(i) for i in data[0].split()]
+		p = [i for i in p if len(i)]
+		return p
+
+	def _parse_mail(self, i):
+		rv, data = self.M.fetch(i, '(RFC822)')
+		if rv != 'OK':
+			print("ERROR getting message", i)
+			return []
+		msg = email.message_from_string(data[0][1].decode('utf-8'))
+		email_time = get_email_time(msg['Date'])
+		try:
+			packet = parsetelem(msg.get_payload()[1].get_payload(decode=True))
+		except IndexError:
+			return []
+		packet['emailtime'] = email_time
+		return packet
+
+def get_mailbox():
+	M = imaplib.IMAP4_SSL('imap.gmail.com')
+	M.login(os.environ['gmod_email'], os.environ['gmod_pwd'])
+	rv, _ = M.select("INBOX")
+	if rv != 'OK':
+		raise Exception('Unable to login!')
+	return M
 
 def get_email_time(d):
 	date_tuple = email.utils.parsedate_tz(d)
 	unix_ts = email.utils.mktime_tz(date_tuple)
 	local_date = datetime.datetime.utcfromtimestamp(unix_ts)
 	return local_date
-
-def process_mailbox(M):
-	packets = []
-	rv, data = M.search(None, "ALL")
-	if rv != 'OK':
-		print("No messages found!")
-		return packets
-
-	for num in data[0].split():
-		rv, data = M.fetch(num, '(RFC822)')
-		if rv != 'OK':
-			print("ERROR getting message", num)
-			return packets
-		msg = email.message_from_string(data[0][1].decode('utf-8'))
-		email_time = get_email_time(msg['Date'])
-
-		try:
-			packet = parsetelem(msg.get_payload()[1].get_payload(decode=True))
-			packet['emailtime'] = email_time
-			packets.append(packet)
-		except IndexError:
-			pass
-	return packets
 
 def parsetelem(telem):
 	telemlist = telem.decode('utf-8').split('|')
@@ -76,20 +99,3 @@ def makestatus(string):
 	asicstate = string[1]
 	siphrastate = string[2]
 	return flightstate, asicstate, siphrastate
-
-def get_latest_packets():
-	packets = []
-	try:
-		M.login(os.environ['gmod_email'], os.environ['gmod_pwd'])
-	except imaplib.IMAP4.error:
-		print("LOGIN FAILED!!! ")
-		return packets
-	rv, data = M.select("INBOX")
-	if rv == 'OK':
-		packets = process_mailbox(M)
-		M.close()
-	M.logout()
-	return packets
-
-if __name__ == '__main__':
-	print(get_latest_packets())

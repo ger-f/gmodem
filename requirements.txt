@@ -1,6 +1,6 @@
 python-dotenv
 dash
-dash_core_components
+dash_core_components==0.20.0
 dash_html_components
 dash_renderer
 flask
