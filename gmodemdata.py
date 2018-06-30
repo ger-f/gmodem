@@ -3,14 +3,35 @@ import imaplib
 import email
 import datetime
 import os
+from threading import Thread
+import time
 
 from dotenv import load_dotenv
 load_dotenv()
 
 class PacketGetter:
-	def __init__(self):
+	def __init__(self, refresh=60):
 		self.M = get_mailbox()
 		self.packets = self.get_backlog()
+		self.refresh = refresh
+		self.run = False
+		self.thread = None
+		self.start()
+
+
+	def start(self):
+		self.run = True
+		self.thread = Thread(target=self.update_thread, args=[])
+		self.thread.start()
+
+	def stop(self):
+		self.run = False
+		self.thread.join()
+
+	def update_thread(self):
+		while self.run:
+			self.check_for_updates()
+			time.sleep(self.refresh)
 
 	def get_backlog(self):
 		return self.process_mailbox(mode='ALL')
@@ -89,10 +110,10 @@ def makefloat(string):
 
 def maketime(string):
 	try:
-		time = datetime.datetime.strptime(string, '%H%M%S').time()
+		thetime = datetime.datetime.strptime(string, '%H%M%S').time()
 	except:
-		time = None
-	return time
+		thetime = None
+	return thetime
 
 def makestatus(string):
 	flightstate = string[0]
