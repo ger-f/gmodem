@@ -5,10 +5,13 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State
 import pandas as pd
+from colour import Color
 
 from gmodemdata import PacketGetter
 from server import app, server
 from plotly import graph_objs as go
+
+from lib.app_layout import footer, header
 
 # TODO:
 # 1 - lerp colours as a function of time
@@ -16,12 +19,20 @@ from plotly import graph_objs as go
 # 3 - add header/footer + css
 # 4 - add graphes
 
-colors = dict(orange='#f79b4b',
+
+# Fixes to do
+# 1 remove undo on new update
+# 2 fix
+# 3 add css
+
+colors = dict(col_a = Color('#f79b4b'), # Orange
+                col_b = Color('#589EA5'), # Teal
+                orange='#f79b4b',
                 teal='#589EA5',
                 purple='#660066',
                 purple_two='#7A75A8',
-                green='#198C70',)
-
+                green='#198C70'
+                    )
 plotly_config = dict(displayModeBar=False)
 
 global_df = pd.DataFrame(PacketGetter().packets)
@@ -61,12 +72,6 @@ def init_map():
 
     return go.Figure(layout=layout, )
 
-def make_header():
-    return html.Div(html.H1('Headdder'), className='header')
-
-def make_footer():
-    return html.Div(html.H1('Footer'), className='footer')
-
 def make_summary_data(d={}):
     style = {'padding': '5px', 'fontSize': '16px'}
     time = d.get('emailtime','-')
@@ -80,29 +85,43 @@ def make_summary_data(d={}):
         html.Span('SIPHRA Status: {}'.format(d.get('siphrastate', 0.0)), style=style),
         html.Span('Flight Status: {}'.format(d.get('flightstate', 0.0)), style=style),]
 
-app.layout=html.Div(
+app.layout=html.Div(id='container', className='background',
     children=[
-        make_header(),
-        html.H1('Dashiest of Boards'),
-        html.Div(id='summary_div', children=make_summary_data()
-            ),
-        html.Div(id='map_div',
-            children=dcc.Graph(id='map-graph', figure=init_map(), config=plotly_config),
+        html.Meta(name='viewport', content='width=device-width, initial-scale=1.0'),
+        html.Meta(
+            name='description',
+            content=('GMoDem 2018 Flight Dashboard')
         ),
-        html.Div(id='temp_div',
-            children=dcc.Graph(id='temp-graph', config=plotly_config)
+        header,
+        html.Div(className='content-container', children=[
+            html.Div(className='section-container', children=[
+                html.Div(id='summary_div', children=make_summary_data(), className='container-width',
+                ),
+            ]),
+            html.Hr(),
+            html.Div(className='section-container', children=[
+                html.Div(id='map_div',
+                    children=dcc.Graph(id='map-graph', figure=init_map(), config=plotly_config),
+                ),
+            ]),
+            html.Hr(),
+            html.Div(className='section-container', children=[
+                html.Div(id='temp_div',
+                    children=dcc.Graph(id='temp-graph', config=plotly_config)
+                    ),
+                html.Div(id='count_div',
+                    children=dcc.Graph(id='count-graph', config=plotly_config)
+                    ),
+            ]),
+            dcc.Interval(
+                id='interval-component',
+                interval=60*1e3,
+                n_intervals=0
             ),
-        html.Div(id='count_div',
-            children=dcc.Graph(id='count-graph', config=plotly_config)
-            ),
-        dcc.Interval(
-            id='interval-component',
-            interval=60*1e3,
-            n_intervals=0
-        ),
-        html.Div(hidden=True, id='hidden-div', children='hi'),
-        make_footer(),
-    ]
+            html.Div(hidden=True, id='hidden-div'),
+        ]),
+        footer,
+    ],
 )
 
 def load_json(json):
@@ -153,7 +172,25 @@ def update_topbar(json):
                 )
             ),
         ]
-    return go.Figure(data=data)
+
+    layout = go.Layout(
+        title='Temperatures',
+        yaxis=dict(
+            title=u'℃'
+        ),
+        yaxis2=dict(
+            title='m',
+            titlefont=dict(
+                color=colors['orange']
+            ),
+            tickfont=dict(
+                color=colors['orange']
+            ),
+            overlaying='y',
+            side='right'
+        ),
+    )
+    return go.Figure(data=data, layout=layout)
 
 # Update Count/Alt graph
 @app.callback(Output('count-graph', 'figure'),
@@ -191,7 +228,7 @@ def update_topbar(json):
             ),
             overlaying='y',
             side='right'
-        )
+        ),
     )
 
     return go.Figure(data=data, layout=layout)
@@ -202,6 +239,12 @@ def update_topbar(json):
                 [State('map-graph', 'relayoutData')])
 def update_map(json, relayout_data):
     df = load_json(json)
+
+    zoom = 7
+    bearing = 0
+    lat_centre = 31.77996
+    lon_centre = -95.71689
+
     if relayout_data is not None:
         if 'mapbox' in relayout_data:
             mpbox = relayout_data['mapbox']
@@ -209,13 +252,6 @@ def update_map(json, relayout_data):
             lon_centre = float(mpbox['center']['lon'])
             bearing = float(mpbox['bearing'])
             zoom = float(mpbox['zoom'])
-    else:
-        zoom = 7
-        bearing = 0
-        lat_centre = 31.77996
-        lon_centre = -95.71689
-
-
 
     data = [
         go.Scattermapbox(
@@ -223,7 +259,12 @@ def update_map(json, relayout_data):
             lon=df.lon,
             mode='markers',
             marker=dict(
-                size=14
+                size=14,
+                cmin=df.alt.min(),
+                cmax=df.alt.max(),
+                color=df.alt,
+                colorbar=dict(title='Altitude (m)'),
+                colorscale='Viridis'
             ),
             text=df.time,
         )
@@ -240,7 +281,7 @@ def update_map(json, relayout_data):
                 lat=lat_centre,
                 lon=lon_centre,
             ),
-            # style='dark',
+            style='dark',
             bearing=bearing,
             zoom=zoom
         ),
@@ -248,6 +289,20 @@ def update_map(json, relayout_data):
 
     return go.Figure(data=data, layout=layout)
 
+
+css = ['https://codepen.io/ger-ie/pen/XYOmLZ.css',
+       'https://codepen.io/ger-ie/pen/LrqpKX.css',
+       'https://codepen.io/ger-ie/pen/mKveZN.css',]
+
+app.css.append_css({
+    'external_url': (
+                css[0],
+                css[1],
+                css[2],
+                'https://fonts.googleapis.com/css?family=Michroma',)
+    })
+
+# app.scripts.config.serve_locally = True
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8001)
