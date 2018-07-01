@@ -35,7 +35,8 @@ colors = dict(col_a = Color('#f79b4b'), # Orange
                     )
 plotly_config = dict(displayModeBar=False)
 
-global_df = pd.DataFrame(PacketGetter().packets)
+PACKET_GETTER = PacketGetter()
+PACKET_GETTER.start()
 
 def init_map():
     zoom = 7
@@ -72,10 +73,11 @@ def init_map():
 
     return go.Figure(layout=layout, )
 
-def make_summary_data(d={}):
+def make_summary_data(d={}, n='-'):
     style = {'padding': '5px', 'fontSize': '16px'}
     time = d.get('emailtime','-')
     return [
+        html.Span('Packets received: {}'.format(n), style=style),
         html.Span('Last packet received: {}'.format(time), style=style),
         html.Span('Current Longitude: {0:.2f}'.format(d.get('lon', 0.0)), style=style),
         html.Span('Current Latitude: {0:.2f}'.format(d.get('lat', 0.0)), style=style),
@@ -130,9 +132,8 @@ def load_json(json):
 # Save data to hidden json
 @app.callback(Output('hidden-div', 'children'),
                 [Input('interval-component', 'n_intervals')])
-def test(n):
-    # print('checking for new packets')
-    df = global_df.sort_values(by='emailtime')
+def update_data(n):
+    df = pd.DataFrame(PACKET_GETTER.packets).sort_values(by='emailtime')
     df['emailtime'] = pd.to_datetime(df['emailtime']).dt.strftime('%Y-%m-%d %H:%M:%S')
     return df.to_json()
     if n%2:
@@ -145,7 +146,7 @@ def test(n):
                 [Input('hidden-div', 'children')],)
 def update_topbar(json):
     df = load_json(json).sort_values(by='emailtime')
-    return make_summary_data(d=df.iloc[-1])
+    return make_summary_data(d=df.iloc[-1], n=df.index.size)
 
 # Update temperature graph
 @app.callback(Output('temp-graph', 'figure'),

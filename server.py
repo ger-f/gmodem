@@ -10,4 +10,4 @@ server = flask.Flask(__name__, static_url_path='/public', static_folder='./publi
 server.secret_key = os.environ['SECRET_KEY']
 
 app = dash.Dash(__name__, server=server, url_base_pathname='/')
-app.title = 'GMOD Dashboard'
+app.title = 'GMoDem Dashboard'
