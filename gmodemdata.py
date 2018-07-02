@@ -16,8 +16,6 @@ class PacketGetter:
 		self.refresh = refresh
 		self.run = False
 		self.thread = None
-		self.start()
-
 
 	def start(self):
 		self.run = True
@@ -30,8 +28,12 @@ class PacketGetter:
 
 	def update_thread(self):
 		while self.run:
-			self.check_for_updates()
+			print('checking the emails!')
+			print(len(self.packets))
+			print('\n'*10)
 			time.sleep(self.refresh)
+			self.check_for_updates()
+
 
 	def get_backlog(self):
 		return self.process_mailbox(mode='ALL')
