@@ -6,20 +6,28 @@ import os
 from threading import Thread
 import time
 
+import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
 class PacketGetter:
-	def __init__(self, refresh=60):
+	def __init__(self, refresh=45):
 		self.M = get_mailbox()
 		self.packets = self.get_backlog()
 		self.refresh = refresh
 		self.run = False
 		self.thread = None
+		self.outname='./packets.csv'
+
+	def save_csv(self):
+		df = pd.DataFrame(self.packets)
+		df.sort_values(by='emailtime', inplace=True)
+		df.to_csv(self.outname, index=False)
 
 	def start(self):
 		self.run = True
 		self.thread = Thread(target=self.update_thread, args=[])
+		self.save_csv()
 		self.thread.start()
 
 	def stop(self):
@@ -28,24 +36,28 @@ class PacketGetter:
 
 	def update_thread(self):
 		while self.run:
-			print('checking the emails!')
-			print(len(self.packets))
-			print('\n'*10)
 			time.sleep(self.refresh)
 			self.check_for_updates()
 
-
 	def get_backlog(self):
 		return self.process_mailbox(mode='ALL')
+		return []
 
 	def get_latest(self):
 		return self.process_mailbox(mode='UNSEEN')
 
 	def check_for_updates(self):
+		rv, _ = self.M.select("INBOX")
+		if rv != 'OK':
+			print('unable to refresh email!')
+			return
+
 		p = [i for i in self.get_latest() if len(i)]
 		if not len(p):
 			return
+
 		self.packets.extend(p)
+		self.save_csv()
 
 	def process_mailbox(self, mode):
 		rv, data = self.M.search(None, mode)
@@ -63,6 +75,13 @@ class PacketGetter:
 			return []
 		msg = email.message_from_string(data[0][1].decode('utf-8'))
 		email_time = get_email_time(msg['Date'])
+
+		main_msg = msg.get_payload()
+		# some messages have no attachment and are strings not lists
+		if isinstance(main_msg, (str)):
+			if 'no data' in main_msg.lower():
+				return []
+
 		try:
 			packet = parsetelem(msg.get_payload()[1].get_payload(decode=True))
 		except IndexError:

@@ -126,16 +126,22 @@ app.layout=html.Div(id='container', className='background',
     ],
 )
 
+def load_packet_data():
+    # Read packet data from disk
+    df = pd.read_csv('./packets.csv',)
+    df['emailtime'] = pd.to_datetime(df['emailtime']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    return df.to_json()
+
+
 def load_json(json):
-    return pd.read_json(json)
+    return pd.read_json(json).sort_values(by='emailtime')
 
 # Save data to hidden json
 @app.callback(Output('hidden-div', 'children'),
                 [Input('interval-component', 'n_intervals')])
 def update_data(n):
-    df = pd.DataFrame(PACKET_GETTER.packets).sort_values(by='emailtime')
-    df['emailtime'] = pd.to_datetime(df['emailtime']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    return df.to_json()
+    df_json = load_packet_data()
+    return df_json
     if n%2:
         return global_df.to_json()
     else:
