@@ -5,7 +5,6 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State
 import pandas as pd
-from colour import Color
 
 from gmodemdata import PacketGetter
 from server import app, server
@@ -25,14 +24,14 @@ from lib.app_layout import footer, header
 # 2 fix
 # 3 add css
 
-colors = dict(col_a = Color('#f79b4b'), # Orange
-                col_b = Color('#589EA5'), # Teal
-                orange='#f79b4b',
-                teal='#589EA5',
-                purple='#660066',
-                purple_two='#7A75A8',
-                green='#198C70'
-                    )
+colors = dict(
+            orange='#f79b4b',
+            teal='#589EA5',
+            purple='#660066',
+            purple_two='#7A75A8',
+            green='#198C70'
+            )
+
 plotly_config = dict(displayModeBar=False)
 
 PACKET_GETTER = PacketGetter()
