@@ -80,7 +80,7 @@ def make_summary_data(d={}, n='-'):
         html.Span('Last packet received: {}'.format(time), style=style),
         html.Span('Current Longitude: {0:.2f}'.format(d.get('lon', 0.0)), style=style),
         html.Span('Current Latitude: {0:.2f}'.format(d.get('lat', 0.0)), style=style),
-        html.Span('Current Altitdue: {0:.2f}'.format(d.get('alt', 0.0)), style=style),
+        html.Span('Current Altitude: {0:.2f}'.format(d.get('alt', 0.0)), style=style),
         html.Span('Bias Voltage: {0:.2f}'.format(d.get('volts', 0.0)), style=style),
         html.Span('ASIC Status: {}'.format(d.get('asicstate', 0.0)), style=style),
         html.Span('SIPHRA Status: {}'.format(d.get('siphrastate', 0.0)), style=style),
