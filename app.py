@@ -34,11 +34,11 @@ colors = dict(
 
 plotly_config = dict(displayModeBar=False)
 
-PACKET_GETTER = PacketGetter()
-PACKET_GETTER.start()
+# PACKET_GETTER = PacketGetter()
+# PACKET_GETTER.start()
 
 def init_map():
-    zoom = 7
+    zoom = 4
     bearing = 0
     lat_centre = 31.77996
     lon_centre = -95.71689
@@ -116,7 +116,7 @@ app.layout=html.Div(id='container', className='background',
             ]),
             dcc.Interval(
                 id='interval-component',
-                interval=60*1e3,
+                interval=600*1e3,
                 n_intervals=0
             ),
             html.Div(hidden=True, id='hidden-div'),
@@ -248,8 +248,8 @@ def update_map(json, relayout_data):
 
     zoom = 7
     bearing = 0
-    lat_centre = 31.77996
-    lon_centre = -95.71689
+    lat_centre = 31.57305
+    lon_centre = -99.99
 
     if relayout_data is not None:
         if 'mapbox' in relayout_data:
